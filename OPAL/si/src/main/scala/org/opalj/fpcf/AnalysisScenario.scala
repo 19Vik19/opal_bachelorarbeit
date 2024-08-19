@@ -282,7 +282,7 @@ class AnalysisScenario[A](val ps: PropertyStore) {
         //    constraints and can always be scheduled in the same batch!)
 
         // TODO ....
-
+        println("Viktor !!!")
         Schedule(
             if (allCS.isEmpty) List.empty else List(computePhase(propertyStore)),
             initializationData
