@@ -67,6 +67,8 @@ ScalaUnidoc / unidoc / scalacOptions ++= Opts.doc.version(version.value)
 ScalaUnidoc / unidoc / scalacOptions ++= Opts.doc.title("The OPAL Framework")
 
 ThisBuild / javaOptions ++= Seq(
+  "-Dorg.opalj.threads.CPUBoundTasks=8", 
+	"-Dorg.opalj.threads.IOBoundTasks=24", 
   "-Xmx24G",
   "-Xms4096m",
   "-XX:ThreadStackSize=2048",
@@ -75,6 +77,10 @@ ThisBuild / javaOptions ++= Seq(
   "-XX:SurvivorRatio=8",
   "-XX:+UseParallelGC"
 )
+
+ThisBuild / javaOptions -= "-Xmx26G"
+
+ThisBuild / javaOptions += "-Xmx16G" 
 
 addCommandAlias(
   "compileAll",
