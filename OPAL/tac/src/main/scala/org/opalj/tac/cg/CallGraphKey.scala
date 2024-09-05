@@ -148,9 +148,13 @@ trait CallGraphKey extends ProjectInformationKey[CallGraph, Nothing] {
         cg
     }
 
+    def getAnalysis(project: SomeProject): Iterable[FPCFAnalysisScheduler] = {
+      allCallGraphAnalyses(project)
+    }
+
     protected[this] def runAnalyses(project: SomeProject, ps: PropertyStore): Unit = {
-        val manager = project.get(FPCFAnalysesManagerKey)
-        manager.runAll(allCallGraphAnalyses(project))
+            val manager = project.get(FPCFAnalysesManagerKey)
+            manager.runAll(allCallGraphAnalyses(project))
     }
 
     private[this] def resolveAnalysisRunner(

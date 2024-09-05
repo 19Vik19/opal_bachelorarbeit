@@ -158,7 +158,7 @@ object Immutability {
         LazyL0CompileTimeConstancyAnalysis,
         LazySimpleEscapeAnalysis,
         EagerFieldAccessInformationAnalysis
-      )
+        )
 
     L2PurityAnalysis.setRater(Some(SystemOutLoggingAllExceptionRater))
 
@@ -194,11 +194,17 @@ object Immutability {
     val propertyStore = project.get(PropertyStoreKey)
     val analysesManager = project.get(FPCFAnalysesManagerKey)
 
-    project.get(callgraphKey)
+    //project.get(callgraphKey)
 
+    val beforeanalyses = callgraphKey.getAnalysis(project)
+
+    val batch1stop : List[FPCFAnalysisScheduler] = dependencies :+ null
+    val updateddependencies: List[FPCFAnalysisScheduler] = batch1stop ++ beforeanalyses
+
+    println("STOP")
     time {
       analysesManager.runAll(
-        dependencies,
+        updateddependencies,
         { (css: List[ComputationSpecification[FPCFAnalysis]]) =>
           analysis match {
             case Assignability =>
