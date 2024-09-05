@@ -281,32 +281,7 @@ class AnalysisScenario[A](val ps: PropertyStore) {
         //    final properties (unless it is a transformer, the latter have special paths and
         //    constraints and can always be scheduled in the same batch!)
 
-        // TODO ....
-        println("\nVIKTOR-Start")
-        println(allCS)
-        println("\n")
-        println(allCS.toString())
-        println("\n")
-        println(propertyStore)
-        println("\n")
-        println(propertyStore.toString())
-        println("\n")
-        println(initializationData)
-        println("\n")
-        println(initializationData.toString())
-        println("\n")
-        println(underivedProperties)
-        println("\n")
-        println(underivedProperties.toString())
-        println("\n")
-        println(ps)
-        println("\n")
-        println(ps.toString())
-        println("\n")
-        println(allProperties)
-        println("\n")
-        println(allProperties.toString())
-        println("VIKTOR-Stop\n")
+        // TODO ...
         Schedule(
             if (allCS.isEmpty) List.empty else List(computePhase(propertyStore)),
             initializationData

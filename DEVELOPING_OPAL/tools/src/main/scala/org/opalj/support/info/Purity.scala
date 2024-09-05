@@ -66,6 +66,7 @@ import org.opalj.tac.fpcf.analyses.LazyFieldLocalityAnalysis
 import org.opalj.tac.fpcf.analyses.escape.LazyInterProceduralEscapeAnalysis
 import org.opalj.tac.fpcf.analyses.escape.LazyReturnValueFreshnessAnalysis
 import org.opalj.tac.fpcf.analyses.escape.LazySimpleEscapeAnalysis
+import org.opalj.tac.fpcf.analyses.fieldaccess.EagerFieldAccessInformationAnalysis
 import org.opalj.tac.fpcf.analyses.fieldassignability.EagerL0FieldAssignabilityAnalysis
 import org.opalj.tac.fpcf.analyses.fieldassignability.EagerL1FieldAssignabilityAnalysis
 import org.opalj.tac.fpcf.analyses.fieldassignability.EagerL2FieldAssignabilityAnalysis
@@ -87,6 +88,7 @@ import org.opalj.util.Seconds
  * @author Dominik Helm
  */
 object Purity {
+
 
     // OPALLogger.updateLogger(GlobalLogContext, DevNullLogger)
 
@@ -132,7 +134,8 @@ object Purity {
         "org/xml/sax"
     )
 
-    def evaluate(
+    def
+    evaluate(
         cp:                    File,
         projectDir:            Option[String],
         libDir:                Option[String],
@@ -253,7 +256,7 @@ object Purity {
         time {
             project.get(callGraphKey)
         } { t => callGraphTime = t.toSeconds }
-
+// SO EINE IDEE: Vllt Purity umschreiben sodass es anders läuft
         val reachableMethods =
             ps.entities(Callers.key).collect {
                 case FinalEP(m: DeclaredMethod, c: Callers) if c ne NoCallers => m
@@ -580,6 +583,8 @@ object Purity {
                 return;
         }
 
+        support ::= EagerFieldAccessInformationAnalysis
+
         if (eager) {
             support ::= EagerClassImmutabilityAnalysis
             support ::= EagerTypeImmutabilityAnalysis
@@ -625,6 +630,8 @@ object Purity {
                     case LazyL1PurityAnalysis => support ::= LazyL1FieldAssignabilityAnalysis
                     case LazyL2PurityAnalysis => support ::= LazyL1FieldAssignabilityAnalysis
                 }
+//ÜBERALL EAGER VERWENDEN ?!
+
 
             case Some(a) =>
                 Console.println(s"unknown field assignability analysis: $a")
