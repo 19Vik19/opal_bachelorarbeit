@@ -26,7 +26,7 @@ import org.opalj.br.analyses.BasicReport
 import org.opalj.br.analyses.Project
 import org.opalj.br.analyses.Project.JavaClassFileReader
 import org.opalj.br.fpcf.FPCFAnalysesManagerKey
-import org.opalj.br.fpcf.FPCFAnalysis
+//import org.opalj.br.fpcf.FPCFAnalysis
 import org.opalj.br.fpcf.FPCFAnalysisScheduler
 import org.opalj.br.fpcf.PropertyStoreKey
 import org.opalj.br.fpcf.analyses.LazyL0CompileTimeConstancyAnalysis
@@ -55,7 +55,7 @@ import org.opalj.br.fpcf.properties.immutability.TransitivelyImmutableType
 import org.opalj.br.fpcf.properties.immutability.TypeImmutability
 import org.opalj.br.fpcf.properties.immutability.UnsafelyLazilyInitialized
 import org.opalj.bytecode.JRELibraryFolder
-import org.opalj.fpcf.ComputationSpecification
+//import org.opalj.fpcf.ComputationSpecification
 import org.opalj.fpcf.EPS
 import org.opalj.fpcf.Entity
 import org.opalj.fpcf.OrderedProperty
@@ -145,8 +145,9 @@ object Immutability {
 
         val allFieldsInProjectClassFiles = project.allProjectClassFiles.iterator.flatMap { _.fields }.toSet
 
-        val dependencies: List[FPCFAnalysisScheduler] =
+        val dependencies_immutability: List[FPCFAnalysisScheduler] =
             List(
+                null,
                 LazyL2FieldAssignabilityAnalysis,
                 LazyFieldImmutabilityAnalysis,
                 LazyClassImmutabilityAnalysis,
@@ -154,10 +155,9 @@ object Immutability {
                 LazyStaticDataUsageAnalysis,
                 LazyL0CompileTimeConstancyAnalysis,
                 LazySimpleEscapeAnalysis,
-                EagerFieldAccessInformationAnalysis
+                EagerFieldAccessInformationAnalysis,
+                null
             )
-
-        project.get(callgraphKey)
 
         L2PurityAnalysis.setRater(Some(SystemOutLoggingAllExceptionRater))
 
@@ -188,47 +188,51 @@ object Immutability {
         val propertyStore = project.get(PropertyStoreKey)
         val analysesManager = project.get(FPCFAnalysesManagerKey)
 
+        val dependencies_callgraph: Iterable[FPCFAnalysisScheduler] = callgraphKey.getAnalyses(project)
+        val dependencies: Iterable[FPCFAnalysisScheduler] = dependencies_callgraph ++ dependencies_immutability
+
         time {
             analysesManager.runAll(
-                dependencies,
-                {
-                    (css: List[ComputationSpecification[FPCFAnalysis]]) =>
-                        analysis match {
-                            case Assignability =>
-                                if (css.contains(LazyL2FieldAssignabilityAnalysis))
-                                    allFieldsInProjectClassFiles.foreach(f =>
-                                        propertyStore.force(f, FieldAssignability.key)
-                                    )
-                            case Fields =>
-                                if (css.contains(LazyFieldImmutabilityAnalysis))
-                                    allFieldsInProjectClassFiles.foreach(f =>
-                                        propertyStore.force(f, FieldImmutability.key)
-                                    )
-                            case Classes =>
-                                if (css.contains(LazyClassImmutabilityAnalysis))
-                                    allProjectClassTypes.foreach(c => propertyStore.force(c, ClassImmutability.key))
-                            case Types =>
-                                if (css.contains(LazyTypeImmutabilityAnalysis))
-                                    allProjectClassTypes.foreach(c => propertyStore.force(c, TypeImmutability.key))
-                            case All =>
-                                if (css.contains(LazyL2FieldAssignabilityAnalysis))
-                                    allFieldsInProjectClassFiles.foreach(f => {
-                                        import org.opalj.br.fpcf.properties.immutability
-                                        propertyStore.force(f, immutability.FieldAssignability.key)
-                                    })
-                                if (css.contains(LazyFieldImmutabilityAnalysis))
-                                    allFieldsInProjectClassFiles.foreach(f =>
-                                        propertyStore.force(f, FieldImmutability.key)
-                                    )
-                                if (css.contains(LazyClassImmutabilityAnalysis))
-                                    allProjectClassTypes.foreach(c => {
-                                        import org.opalj.br.fpcf.properties.immutability
-                                        propertyStore.force(c, immutability.ClassImmutability.key)
-                                    })
-                                if (css.contains(LazyTypeImmutabilityAnalysis))
-                                    allProjectClassTypes.foreach(c => propertyStore.force(c, TypeImmutability.key))
-                        }
-                }
+                dependencies
+
+//                {
+//                    (css: List[ComputationSpecification[FPCFAnalysis]]) =>
+//                        analysis match {
+//                            case Assignability =>
+//                                if (css.contains(LazyL2FieldAssignabilityAnalysis))
+//                                    allFieldsInProjectClassFiles.foreach(f =>
+//                                        propertyStore.force(f, FieldAssignability.key)
+//                                    )
+//                            case Fields =>
+//                                if (css.contains(LazyFieldImmutabilityAnalysis))
+//                                    allFieldsInProjectClassFiles.foreach(f =>
+//                                        propertyStore.force(f, FieldImmutability.key)
+//                                    )
+//                            case Classes =>
+//                                if (css.contains(LazyClassImmutabilityAnalysis))
+//                                    allProjectClassTypes.foreach(c => propertyStore.force(c, ClassImmutability.key))
+//                            case Types =>
+//                                if (css.contains(LazyTypeImmutabilityAnalysis))
+//                                    allProjectClassTypes.foreach(c => propertyStore.force(c, TypeImmutability.key))
+//                            case All =>
+//                                if (css.contains(LazyL2FieldAssignabilityAnalysis))
+//                                    allFieldsInProjectClassFiles.foreach(f => {
+//                                        import org.opalj.br.fpcf.properties.immutability
+//                                        propertyStore.force(f, immutability.FieldAssignability.key)
+//                                    })
+//                                if (css.contains(LazyFieldImmutabilityAnalysis))
+//                                    allFieldsInProjectClassFiles.foreach(f =>
+//                                        propertyStore.force(f, FieldImmutability.key)
+//                                    )
+//                                if (css.contains(LazyClassImmutabilityAnalysis))
+//                                    allProjectClassTypes.foreach(c => {
+//                                        import org.opalj.br.fpcf.properties.immutability
+//                                        propertyStore.force(c, immutability.ClassImmutability.key)
+//                                    })
+//                                if (css.contains(LazyTypeImmutabilityAnalysis))
+//                                    allProjectClassTypes.foreach(c => propertyStore.force(c, TypeImmutability.key))
+//                        }
+//                }
             )
         } { t => analysisTime = t.toSeconds }
 

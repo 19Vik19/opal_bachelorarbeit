@@ -33,6 +33,8 @@ class AnalysisScenario[A](val ps: PropertyStore) {
     private[this] var triggeredCS: Set[ComputationSpecification[A]] = Set.empty
     private[this] var transformersCS: Set[ComputationSpecification[A]] = Set.empty
 
+    private[this] var scheduleBatches: List[PhaseConfiguration[A]] = List()
+
     private[this] var derivedBy: Map[PropertyKind, (PropertyBounds, Set[ComputationSpecification[A]])] = {
         Map.empty
     }
@@ -47,19 +49,30 @@ class AnalysisScenario[A](val ps: PropertyStore) {
         if (scheduleComputed) {
             throw new IllegalStateException("process was already computed");
         }
+        if (cs == null) {
+            val phase = computePhase(ps)
+            scheduleBatches = scheduleBatches :+ phase
+            eagerCS = Set.empty
+            triggeredCS = Set.empty
+            lazyCS = Set.empty
+            transformersCS = Set.empty
 
-        cs.computationType match {
-            case EagerComputation     => eagerCS += cs
-            case TriggeredComputation => triggeredCS += cs
-            case LazyComputation      => lazyCS += cs
-            case Transformer          => transformersCS += cs
+            this
+        } else {
+            cs.computationType match {
+                case EagerComputation     => eagerCS += cs
+                case TriggeredComputation => triggeredCS += cs
+                case LazyComputation      => lazyCS += cs
+                case Transformer          => transformersCS += cs
+
+            }
+
+            allCS += cs
+
+            initializationData += cs -> cs.init(ps)
+
+            this
         }
-
-        allCS += cs
-
-        initializationData += cs -> cs.init(ps)
-
-        this
     }
 
     /**
@@ -284,7 +297,7 @@ class AnalysisScenario[A](val ps: PropertyStore) {
         // TODO ....
 
         Schedule(
-            if (allCS.isEmpty) List.empty else List(computePhase(propertyStore)),
+            if (allCS.isEmpty) List.empty else scheduleBatches,
             initializationData
         )
     }
