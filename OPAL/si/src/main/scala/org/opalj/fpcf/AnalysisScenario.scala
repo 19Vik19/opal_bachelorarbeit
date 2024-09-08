@@ -56,6 +56,8 @@ class AnalysisScenario[A](val ps: PropertyStore) {
             triggeredCS = Set.empty
             lazyCS = Set.empty
             transformersCS = Set.empty
+            allCS = Set.empty
+            derivedProperties = Set.empty
 
             this
         } else {
@@ -140,7 +142,6 @@ class AnalysisScenario[A](val ps: PropertyStore) {
             } while (cssIt.hasNext)
             compDeps addEdge (lastCS -> headCS)
         }
-
         compDeps
     }
 
@@ -296,10 +297,11 @@ class AnalysisScenario[A](val ps: PropertyStore) {
 
         // TODO ....
 
-        Schedule(
-            if (allCS.isEmpty) List.empty else scheduleBatches,
+        val returnSchedule = Schedule(
+            scheduleBatches,
             initializationData
         )
+        returnSchedule
     }
 
     /**
@@ -307,6 +309,61 @@ class AnalysisScenario[A](val ps: PropertyStore) {
      * where all analyses can be executed in the same phase.
      */
     private def computePhase(propertyStore: PropertyStore): PhaseConfiguration[A] = {
+
+        allCS.foreach(processCS)
+        val alreadyComputedPropertyKinds = propertyStore.alreadyComputedPropertyKindIds.toSet
+
+
+
+        // 0. check that a property was not already derived
+        allCS.foreach { cs =>
+            cs.derives foreach { derivedProperty =>
+                if (alreadyComputedPropertyKinds.contains(derivedProperty.pk.id)) {
+                    val pkName = PropertyKey.name(derivedProperty.pk.id)
+                    val m = s"can not register $cs: $pkName was computed in a previous phase"
+                    throw new SpecificationViolation(m)
+                }
+            }
+        }
+
+
+
+        // 1. check for properties that are not derived (and which require an analysis)
+        def useFallback(underivedProperty: PropertyBounds, propertyName: String) = {
+            if (PropertyKey.hasFallback(underivedProperty.pk)) {
+                val message = s"no analyses scheduled for: $propertyName; using fallback"
+                print("analysis configuration")
+                //OPALLogger.warn("analysis configuration", message)
+            } else {
+                throw new IllegalStateException(s"no analysis scheduled for $propertyName")
+            }
+        }
+
+        val analysisAutoConfig = BaseConfig.getBoolean(AnalysisAutoConfigKey)
+        val underivedProperties = usedProperties -- derivedProperties
+        underivedProperties
+            .filterNot { underivedProperty => alreadyComputedPropertyKinds.contains(underivedProperty.pk.id) }
+            .foreach { underivedProperty =>
+                if (!derivedProperties.contains(underivedProperty)) {
+                    val propertyName = PropertyKey.name(underivedProperty.pk.id)
+                    val defaultCSOpt =
+                        if (analysisAutoConfig) defaultAnalysis(underivedProperty) else None
+                    if (defaultCSOpt.isDefined) {
+                        val defaultCS = defaultCSOpt.get
+                        try {
+                            processCS(defaultCS)
+                            val message = s"no analyses scheduled for: $propertyName; using ${defaultCS.name}"
+                            OPALLogger.info("analysis configuration", message)
+                        } catch {
+                            case _: SpecificationViolation =>
+                                useFallback(underivedProperty, propertyName)
+                        }
+                    } else {
+                        useFallback(underivedProperty, propertyName)
+                    }
+                }
+            }
+
 
         // 1. compute the phase configuration; i.e., find those properties for which we must
         //    suppress interim updates.
@@ -334,6 +391,7 @@ class AnalysisScenario[A](val ps: PropertyStore) {
             suppressInterimUpdates = suppressInterimUpdates
         )
 
+
         PhaseConfiguration(phase1Configuration, batchBuilder.result())
     }
 }
@@ -350,8 +408,10 @@ object AnalysisScenario {
      */
     def apply[A](
         analyses:      Iterable[ComputationSpecification[A]],
-        propertyStore: PropertyStore
+        propertyStore: PropertyStore,
+        defaultAnalysis: PropertyBounds => Option[ComputationSpecification[A]] = _ => None
     ): AnalysisScenario[A] = {
+
         val as = new AnalysisScenario[A](propertyStore)
         analyses.foreach(as.+=)
         as
