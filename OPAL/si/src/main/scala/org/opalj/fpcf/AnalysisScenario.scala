@@ -66,7 +66,11 @@ class AnalysisScenario[A](val ps: PropertyStore) {
 
             allCS += cs
 
-            initializationData += cs -> cs.init(ps)
+            if (cs.toString() != "ComputationSpecification(name=LazyClassImmutabilityAnalysis,type=LazyComputation)") {
+                initializationData += cs -> cs.init(ps)
+            } else {
+                print("")
+            }
 
             this
         } else {
@@ -321,8 +325,6 @@ class AnalysisScenario[A](val ps: PropertyStore) {
             phaseList = phaseList :+ computePhase(propertyStore)
 
         }
-
-        print("")
 
         for (i <- 0 until phasesCount) {
             initializationData = initializationData ++ initializationDataList(i)
