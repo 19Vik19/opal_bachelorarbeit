@@ -15,8 +15,11 @@ import org.opalj.log.OPALLogger
  */
 class AnalysisScenario[A](val ps: PropertyStore) {
 
-    private[this] var scheduleComputed: Boolean = false
+    private[this] val scheduleComputed: Boolean = false
 
+    private[this] var phasesCount: Int = 0
+
+    private[this] var allCSList: List[Set[ComputationSpecification[A]]] = List.empty
     private[this] var allCS: Set[ComputationSpecification[A]] = Set.empty
 
     private[this] var derivedProperties: Set[PropertyBounds] = Set.empty
@@ -24,10 +27,15 @@ class AnalysisScenario[A](val ps: PropertyStore) {
     private[this] var collaborativelyDerivedProperties: Set[PropertyBounds] = Set.empty
     private[this] var lazilyDerivedProperties: Set[PropertyBounds] = Set.empty
 
+    private[this] var initializationDataList: List[Map[ComputationSpecification[A], Any]] = List.empty
     private[this] var initializationData: Map[ComputationSpecification[A], Any] = Map.empty
 
     private[this] var usedProperties: Set[PropertyBounds] = Set.empty
 
+    private[this] var eagerCSList: List[Set[ComputationSpecification[A]]] = List.empty
+    private[this] var lazyCSList: List[Set[ComputationSpecification[A]]] = List.empty
+    private[this] var triggeredCSList: List[Set[ComputationSpecification[A]]] = List.empty
+    private[this] var transformersCSList: List[Set[ComputationSpecification[A]]] = List.empty
     private[this] var eagerCS: Set[ComputationSpecification[A]] = Set.empty
     private[this] var lazyCS: Set[ComputationSpecification[A]] = Set.empty
     private[this] var triggeredCS: Set[ComputationSpecification[A]] = Set.empty
@@ -44,22 +52,43 @@ class AnalysisScenario[A](val ps: PropertyStore) {
      * that should be scheduled.
      */
     def +=(cs: ComputationSpecification[A]): this.type = {
-        if (scheduleComputed) {
-            throw new IllegalStateException("process was already computed");
+        if (cs != null) {
+            if (scheduleComputed) {
+                throw new IllegalStateException("process was already computed");
+            }
+
+            cs.computationType match {
+                case EagerComputation     => eagerCS += cs
+                case TriggeredComputation => triggeredCS += cs
+                case LazyComputation      => lazyCS += cs
+                case Transformer          => transformersCS += cs
+            }
+
+            allCS += cs
+
+            initializationData += cs -> cs.init(ps)
+
+            this
+        } else {
+            allCSList = allCSList :+ allCS
+            allCS = Set.empty
+
+            initializationDataList = initializationDataList :+ initializationData
+            initializationData = Map.empty
+
+            eagerCSList = eagerCSList :+ eagerCS
+            triggeredCSList = triggeredCSList :+ triggeredCS
+            lazyCSList = lazyCSList :+ lazyCS
+            transformersCSList = transformersCSList :+ transformersCS
+            eagerCS = Set.empty
+            triggeredCS = Set.empty
+            lazyCS = Set.empty
+            transformersCS = Set.empty
+
+            phasesCount += 1
+
+            this
         }
-
-        cs.computationType match {
-            case EagerComputation     => eagerCS += cs
-            case TriggeredComputation => triggeredCS += cs
-            case LazyComputation      => lazyCS += cs
-            case Transformer          => transformersCS += cs
-        }
-
-        allCS += cs
-
-        initializationData += cs -> cs.init(ps)
-
-        this
     }
 
     /**
@@ -219,74 +248,91 @@ class AnalysisScenario[A](val ps: PropertyStore) {
     )(
         implicit logContext: LogContext
     ): Schedule[A] = {
-        if (scheduleComputed) {
-            throw new IllegalStateException("schedule already computed");
-        } else {
-            scheduleComputed = true
-        }
+        var phaseList: List[PhaseConfiguration[A]] = List.empty
+        for (phase <- 0 until phasesCount) {
 
-        allCS.foreach(processCS)
+            derivedProperties = Set.empty
+            usedProperties = Set.empty
 
-        val alreadyComputedPropertyKinds = propertyStore.alreadyComputedPropertyKindIds.toSet
+            allCS = allCSList(phase)
 
-        // 0. check that a property was not already derived
-        allCS.foreach { cs =>
-            cs.derives foreach { derivedProperty =>
-                if (alreadyComputedPropertyKinds.contains(derivedProperty.pk.id)) {
-                    val pkName = PropertyKey.name(derivedProperty.pk.id)
-                    val m = s"can not register $cs: $pkName was computed in a previous phase"
-                    throw new SpecificationViolation(m)
-                }
-            }
-        }
+            initializationData = initializationDataList(phase)
 
-        // 1. check for properties that are not derived (and which require an analysis)
-        def useFallback(underivedProperty: PropertyBounds, propertyName: String) = {
-            if (PropertyKey.hasFallback(underivedProperty.pk)) {
-                val message = s"no analyses scheduled for: $propertyName; using fallback"
-                OPALLogger.warn("analysis configuration", message)
-            } else {
-                throw new IllegalStateException(s"no analysis scheduled for $propertyName")
-            }
-        }
+            eagerCS = eagerCSList(phase)
+            triggeredCS = triggeredCSList(phase)
+            lazyCS = lazyCSList(phase)
+            transformersCS = transformersCSList(phase)
 
-        val analysisAutoConfig = BaseConfig.getBoolean(AnalysisAutoConfigKey)
-        val underivedProperties = usedProperties -- derivedProperties
-        underivedProperties
-            .filterNot { underivedProperty => alreadyComputedPropertyKinds.contains(underivedProperty.pk.id) }
-            .foreach { underivedProperty =>
-                if (!derivedProperties.contains(underivedProperty)) {
-                    val propertyName = PropertyKey.name(underivedProperty.pk.id)
-                    val defaultCSOpt =
-                        if (analysisAutoConfig) defaultAnalysis(underivedProperty) else None
-                    if (defaultCSOpt.isDefined) {
-                        val defaultCS = defaultCSOpt.get
-                        try {
-                            processCS(defaultCS)
-                            val message = s"no analyses scheduled for: $propertyName; using ${defaultCS.name}"
-                            OPALLogger.info("analysis configuration", message)
-                        } catch {
-                            case _: SpecificationViolation =>
-                                useFallback(underivedProperty, propertyName)
-                        }
-                    } else {
-                        useFallback(underivedProperty, propertyName)
+//            if (scheduleComputed) {
+//                throw new IllegalStateException("schedule already computed");
+//            } else {
+//                scheduleComputed = true
+//            }
+
+            allCS.foreach(processCS)
+
+            val alreadyComputedPropertyKinds = propertyStore.alreadyComputedPropertyKindIds.toSet
+
+            // 0. check that a property was not already derived
+            allCS.foreach { cs =>
+                cs.derives foreach { derivedProperty =>
+                    if (alreadyComputedPropertyKinds.contains(derivedProperty.pk.id)) {
+                        val pkName = PropertyKey.name(derivedProperty.pk.id)
+                        val m = s"can not register $cs: $pkName was computed in a previous phase"
+                        throw new SpecificationViolation(m)
                     }
                 }
             }
 
-        // TODO check all further constraints (in particular those related to cyclic dependencies between analysis...)
+            // 1. check for properties that are not derived (and which require an analysis)
+            def useFallback(underivedProperty: PropertyBounds, propertyName: String) = {
+                if (PropertyKey.hasFallback(underivedProperty.pk)) {
+                    val message = s"no analyses scheduled for: $propertyName; using fallback"
+                    OPALLogger.warn("analysis configuration", message)
+                } else {
+                    throw new IllegalStateException(s"no analysis scheduled for $propertyName")
+                }
+            }
 
-        // 2. assign analyses to different batches if an analysis can only process
-        //    final properties (unless it is a transformer, the latter have special paths and
-        //    constraints and can always be scheduled in the same batch!)
+            val analysisAutoConfig = BaseConfig.getBoolean(AnalysisAutoConfigKey)
+            val underivedProperties = usedProperties -- derivedProperties
+            underivedProperties
+                .filterNot { underivedProperty => alreadyComputedPropertyKinds.contains(underivedProperty.pk.id) }
+                .foreach { underivedProperty =>
+                    if (!derivedProperties.contains(underivedProperty)) {
+                        val propertyName = PropertyKey.name(underivedProperty.pk.id)
+                        val defaultCSOpt =
+                            if (analysisAutoConfig) defaultAnalysis(underivedProperty) else None
+                        if (defaultCSOpt.isDefined) {
+                            val defaultCS = defaultCSOpt.get
+                            try {
+                                processCS(defaultCS)
+                                val message = s"no analyses scheduled for: $propertyName; using ${defaultCS.name}"
+                                OPALLogger.info("analysis configuration", message)
+                            } catch {
+                                case _: SpecificationViolation =>
+                                    useFallback(underivedProperty, propertyName)
+                            }
+                        } else {
+                            useFallback(underivedProperty, propertyName)
+                        }
+                    }
+                }
+            phaseList = phaseList :+ computePhase(propertyStore)
 
-        // TODO ....
+        }
+
+        print("")
+
+        for (i <- 0 until phasesCount) {
+            initializationData = initializationData ++ initializationDataList(i)
+        }
 
         Schedule(
-            if (allCS.isEmpty) List.empty else List(computePhase(propertyStore)),
+            phaseList,
             initializationData
         )
+
     }
 
     /**
