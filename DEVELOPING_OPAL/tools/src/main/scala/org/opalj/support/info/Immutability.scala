@@ -56,16 +56,16 @@ import org.opalj.br.fpcf.properties.immutability.TypeImmutability
 import org.opalj.br.fpcf.properties.immutability.UnsafelyLazilyInitialized
 import org.opalj.bytecode.JRELibraryFolder
 import org.opalj.fpcf.ComputationSpecification
-import org.opalj.fpcf.EPS
 import org.opalj.fpcf.Entity
+import org.opalj.fpcf.EPS
 import org.opalj.fpcf.OrderedProperty
 import org.opalj.fpcf.PropertyStoreContext
 import org.opalj.log.LogContext
 import org.opalj.tac.cg.CallGraphKey
 import org.opalj.tac.cg.XTACallGraphKey
 import org.opalj.tac.fpcf.analyses.LazyFieldImmutabilityAnalysis
-import org.opalj.tac.fpcf.analyses.fieldaccess.EagerFieldAccessInformationAnalysis
 import org.opalj.tac.fpcf.analyses.escape.LazySimpleEscapeAnalysis
+import org.opalj.tac.fpcf.analyses.fieldaccess.EagerFieldAccessInformationAnalysis
 import org.opalj.tac.fpcf.analyses.fieldassignability.LazyL2FieldAssignabilityAnalysis
 import org.opalj.tac.fpcf.analyses.purity.L2PurityAnalysis
 import org.opalj.tac.fpcf.analyses.purity.SystemOutLoggingAllExceptionRater
@@ -157,8 +157,6 @@ object Immutability {
                 EagerFieldAccessInformationAnalysis
             )
 
-
-
         L2PurityAnalysis.setRater(Some(SystemOutLoggingAllExceptionRater))
 
         project.updateProjectInformationKeyInitializationData(AIDomainFactoryKey) { _ =>
@@ -188,12 +186,12 @@ object Immutability {
         val propertyStore = project.get(PropertyStoreKey)
         val analysesManager = project.get(FPCFAnalysesManagerKey)
 
-        val dependenciesCallGraph = callgraphKey.getAnalyses(project, propertyStore)
-        val allDependencies = dependenciesCallGraph +: dependencies
-        print("")
+        val callGraphDependencies = callgraphKey.getAnalyses(project, propertyStore).toList
+        val allDependencies = callGraphDependencies ++ dependencies
+
         time {
             analysesManager.runAll(
-                dependencies,
+                allDependencies,
                 {
                     (css: List[ComputationSpecification[FPCFAnalysis]]) =>
                         analysis match {

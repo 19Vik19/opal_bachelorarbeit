@@ -275,39 +275,110 @@ class AnalysisScenario[A](val ps: PropertyStore) {
                 }
             }
 
-        // TODO check all further constraints (in particular those related to cyclic dependencies between analysis...)
+        val phases = preComputationPhase(ps)
 
-        // 2. assign analyses to different batches if an analysis can only process
-        //    final properties (unless it is a transformer, the latter have special paths and
-        //    constraints and can always be scheduled in the same batch!)
+        print("")
 
-        // TODO ....
+        var returnPhases: List[PhaseConfiguration[A]] = List.empty
 
         Schedule(
-            if (allCS.isEmpty) List.empty else List(computePhase(propertyStore)),
+            if (allCS.isEmpty) {
+                List.empty
+            } else {
+                phases.foreach { phase =>
+                    val phases: PhaseConfiguration[A] = computePhase(propertyStore, phase)
+                    returnPhases = returnPhases :+ phases
+                }
+                returnPhases
+            },
             initializationData
         )
+
+    }
+
+    def preComputationPhase(propertyStore: PropertyStore): List[Set[ComputationSpecification[A]]] = {
+        var callGraphCS: Set[ComputationSpecification[A]] = Set.empty
+        var immutabilityCS: Set[ComputationSpecification[A]] = Set.empty
+        var phases: List[Set[ComputationSpecification[A]]] = List(callGraphCS, immutabilityCS)
+
+        // Liste von Analysen
+        val callGraphAnalyse = List(
+            "ComputationSpecification(name=LazyTACAIProvider,type=LazyComputation)",
+            "ComputationSpecification(name=CallGraphAnalysisScheduler,type=TriggeredComputation)",
+            "ComputationSpecification(name=InstantiatedTypesAnalysisScheduler,type=TriggeredComputation)",
+            "ComputationSpecification(name=ConfiguredNativeMethodsInstantiatedTypesAnalysisScheduler,type=TriggeredComputation)",
+            "ComputationSpecification(name=FinalizerAnalysisScheduler,type=TriggeredComputation)",
+            "ComputationSpecification(name=LoadedClassesAnalysisScheduler,type=TriggeredComputation)",
+            "ComputationSpecification(name=StaticInitializerAnalysisScheduler,type=EagerComputation)",
+            "ComputationSpecification(name=ReflectionRelatedCallsAnalysisScheduler,type=EagerComputation)",
+            "ComputationSpecification(name=SerializationRelatedCallsAnalysisScheduler,type=EagerComputation)",
+            "ComputationSpecification(name=ThreadRelatedCallsAnalysisScheduler,type=EagerComputation)",
+            "ComputationSpecification(name=DoPrivilegedAnalysisScheduler,type=EagerComputation)",
+            "ComputationSpecification(name=ConfiguredNativeMethodsCallGraphAnalysisScheduler,type=TriggeredComputation)"
+        )
+        val immutabilityAnalyse = List(
+            "ComputationSpecification(name=LazyL2FieldAssignabilityAnalysis,type=LazyComputation)",
+            "ComputationSpecification(name=LazyFieldImmutabilityAnalysis,type=LazyComputation)",
+            "ComputationSpecification(name=LazyClassImmutabilityAnalysis,type=LazyComputation)",
+            "ComputationSpecification(name=LazyTypeImmutabilityAnalysis,type=LazyComputation)",
+            "ComputationSpecification(name=LazyStaticDataUsageAnalysis,type=LazyComputation)",
+            "ComputationSpecification(name=LazyL0CompileTimeConstancyAnalysis,type=LazyComputation)",
+            "ComputationSpecification(name=LazySimpleEscapeAnalysis,type=LazyComputation)",
+            "ComputationSpecification(name=EagerFieldAccessInformationAnalysis,type=EagerComputation)"
+        )
+
+        eagerCS.foreach { cs =>
+            if (callGraphAnalyse.contains(cs.toString)) {
+                callGraphCS += cs
+            } else if (immutabilityAnalyse.contains(cs.toString())) {
+                immutabilityCS += cs
+            }
+        }
+        lazyCS.foreach { cs =>
+            if (callGraphAnalyse.contains(cs.toString)) {
+                callGraphCS += cs
+            } else if (immutabilityAnalyse.contains(cs.toString())) {
+                immutabilityCS += cs
+            }
+        }
+        triggeredCS.foreach { cs =>
+            if (callGraphAnalyse.contains(cs.toString)) {
+                callGraphCS += cs
+            } else if (immutabilityAnalyse.contains(cs.toString())) {
+                immutabilityCS += cs
+            }
+        }
+        transformersCS.foreach { cs =>
+            if (callGraphAnalyse.contains(cs.toString)) {
+                callGraphCS += cs
+            } else if (immutabilityAnalyse.contains(cs.toString())) {
+                immutabilityCS += cs
+            }
+        }
+
+        phases = List(callGraphCS, immutabilityCS)
+        phases
     }
 
     /**
      * Computes the configuration for a specific batch; this method can only handle the situation
      * where all analyses can be executed in the same phase.
      */
-    private def computePhase(propertyStore: PropertyStore): PhaseConfiguration[A] = {
+    private def computePhase(
+        propertyStore: PropertyStore,
+        phase:         Set[ComputationSpecification[A]]
+    ): PhaseConfiguration[A] = {
 
         // 1. compute the phase configuration; i.e., find those properties for which we must
         //    suppress interim updates.
         var suppressInterimUpdates: Map[PropertyKind, Set[PropertyKind]] = Map.empty
-        // Interim updates have to be suppressed when an analysis uses a property for which
+        // 2. Interim updates have to be suppressed when an analysis uses a property for which
         // the wrong bounds/not enough bounds are computed.
         transformersCS foreach { cs => suppressInterimUpdates += (cs.derivesLazily.get.pk -> cs.uses(ps).map(_.pk)) }
 
         // 3. create the batch
         val batchBuilder = List.newBuilder[ComputationSpecification[A]]
-        batchBuilder ++= lazyCS
-        batchBuilder ++= transformersCS
-        batchBuilder ++= triggeredCS
-        batchBuilder ++= eagerCS
+        batchBuilder ++= phase
 
         // FIXME...
 

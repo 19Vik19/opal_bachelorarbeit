@@ -148,7 +148,7 @@ trait CallGraphKey extends ProjectInformationKey[CallGraph, Nothing] {
         cg
     }
 
-    def getAnalyses(project: SomeProject, ps: PropertyStore): Unit = {
+    def getAnalyses(project: SomeProject, ps: PropertyStore): Iterable[FPCFAnalysisScheduler] = {
         allCallGraphAnalyses(project)
     }
 
