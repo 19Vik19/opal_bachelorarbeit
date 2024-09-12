@@ -157,7 +157,7 @@ object Immutability {
                 EagerFieldAccessInformationAnalysis
             )
 
-        project.get(callgraphKey)
+
 
         L2PurityAnalysis.setRater(Some(SystemOutLoggingAllExceptionRater))
 
@@ -188,6 +188,9 @@ object Immutability {
         val propertyStore = project.get(PropertyStoreKey)
         val analysesManager = project.get(FPCFAnalysesManagerKey)
 
+        val dependenciesCallGraph = callgraphKey.getAnalyses(project, propertyStore)
+        val allDependencies = dependenciesCallGraph +: dependencies
+        print("")
         time {
             analysesManager.runAll(
                 dependencies,
