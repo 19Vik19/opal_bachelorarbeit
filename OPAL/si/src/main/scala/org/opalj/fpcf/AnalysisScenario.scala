@@ -66,6 +66,9 @@ class AnalysisScenario[A](val ps: PropertyStore) {
 
             allCS += cs
 
+            // Entweder funktioniert die erste Phase oder es funktioniert die zweite Phase, da diese cs.init(ps) den PropertyStore anders anpasst als
+            // die cs.init(ps) mit den cs in der ersten Phase. Diese cs verändert den PS und fügt nicht eine Property hinzu (s. Debugger)
+
             if (cs.toString() != "ComputationSpecification(name=LazyClassImmutabilityAnalysis,type=LazyComputation)") {
                 initializationData += cs -> cs.init(ps)
             } else {
