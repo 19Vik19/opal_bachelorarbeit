@@ -95,8 +95,8 @@ import org.opalj.br.fpcf.properties.immutability.TypeImmutability
 import org.opalj.br.fpcf.properties.immutability.UnsafelyLazilyInitialized
 import org.opalj.bytecode.JRELibraryFolder
 import org.opalj.fpcf.ComputationSpecification
-import org.opalj.fpcf.EPS
 import org.opalj.fpcf.Entity
+import org.opalj.fpcf.EPS
 import org.opalj.fpcf.OrderedProperty
 import org.opalj.fpcf.PropertyStoreContext
 import org.opalj.log.LogContext
@@ -273,7 +273,7 @@ object Immutability {
             )
         } { t => analysisTime = t.toSeconds }
 
-        println("TEST START")
+        println("TEST START - DEBUG")
 
         val cg = new CallGraph()(propertyStore, project.get(TypeIteratorKey))
 
@@ -388,7 +388,7 @@ object Immutability {
         println("MutableType: " + propertyStore.finalEntities(MutableType).toSeq.size)
         println("")
 
-        println("TEST ENDE")
+        println("TEST ENDE - DEBUG")
 
         val stringBuilderResults: StringBuilder = new StringBuilder()
 
