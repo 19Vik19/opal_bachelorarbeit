@@ -64,8 +64,9 @@ import org.opalj.log.LogContext
 import org.opalj.tac.cg.CallGraphKey
 import org.opalj.tac.cg.XTACallGraphKey
 import org.opalj.tac.fpcf.analyses.LazyFieldImmutabilityAnalysis
-import org.opalj.tac.fpcf.analyses.escape.LazySimpleEscapeAnalysis
+import org.opalj.tac.fpcf.analyses.escape.EagerSimpleEscapeAnalysis
 import org.opalj.tac.fpcf.analyses.fieldaccess.EagerFieldAccessInformationAnalysis
+import org.opalj.tac.fpcf.analyses.fieldassignability.EagerL2FieldAssignabilityAnalysis
 import org.opalj.tac.fpcf.analyses.fieldassignability.LazyL2FieldAssignabilityAnalysis
 import org.opalj.util.PerformanceEvaluation.time
 import org.opalj.util.Seconds
@@ -146,13 +147,13 @@ object Immutability {
         val dependencies: List[FPCFAnalysisScheduler] =
             List(
                 EagerFieldAccessInformationAnalysis,
-                LazyL2FieldAssignabilityAnalysis,
+                EagerL2FieldAssignabilityAnalysis,
                 LazyFieldImmutabilityAnalysis,
                 LazyClassImmutabilityAnalysis,
                 LazyTypeImmutabilityAnalysis,
                 LazyStaticDataUsageAnalysis,
                 LazyL0CompileTimeConstancyAnalysis,
-                LazySimpleEscapeAnalysis
+                EagerSimpleEscapeAnalysis
             )
 
         project.updateProjectInformationKeyInitializationData(AIDomainFactoryKey) { _ =>
