@@ -305,6 +305,9 @@ final class PKESequentialPropertyStore protected (
 
     private[this] def triggerComputations(e: Entity, pkId: Int): Unit = {
         val triggeredComputations = this.triggeredComputations(pkId)
+        if (triggeredComputations != null){
+            println(this.triggeredComputations(pkId))
+        }
         if (triggeredComputations != null) {
             triggeredComputations foreach { pcEntities =>
                 val (pc, triggeredEntities) = pcEntities

@@ -75,6 +75,7 @@ class ConfiguredNativeMethodsInstantiatedTypesAnalysis private[analyses] (
         (propertyStore(dm, Callers.key): @unchecked) match {
             case FinalP(NoCallers) =>
                 // nothing to do, since there is no caller
+
                 return NoResult;
 
             case eps: EPS[_, _] =>

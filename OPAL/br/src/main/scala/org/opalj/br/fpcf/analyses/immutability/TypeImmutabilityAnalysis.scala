@@ -11,6 +11,7 @@ import org.opalj.br.analyses.cg.TypeExtensibilityKey
 import org.opalj.br.fpcf.properties.immutability.ClassImmutability
 import org.opalj.br.fpcf.properties.immutability.DependentlyImmutableClass
 import org.opalj.br.fpcf.properties.immutability.DependentlyImmutableType
+import org.opalj.br.fpcf.properties.immutability.FieldAssignability
 import org.opalj.br.fpcf.properties.immutability.MutableClass
 import org.opalj.br.fpcf.properties.immutability.MutableType
 import org.opalj.br.fpcf.properties.immutability.NonTransitivelyImmutableClass
@@ -32,6 +33,7 @@ import org.opalj.fpcf.ProperPropertyComputation
 import org.opalj.fpcf.ProperPropertyComputationResult
 import org.opalj.fpcf.Property
 import org.opalj.fpcf.PropertyBounds
+import org.opalj.fpcf.PropertyKind
 import org.opalj.fpcf.PropertyStore
 import org.opalj.fpcf.Result
 import org.opalj.fpcf.SomeEPS
@@ -290,6 +292,40 @@ object EagerTypeImmutabilityAnalysis extends TypeImmutabilityAnalysisScheduler
     }
 }
 
+object TriggeredTypeImmutabilityAnalysis extends TypeImmutabilityAnalysisScheduler
+    with BasicFPCFTriggeredAnalysisScheduler {
+
+    override def derivesEagerly: Set[PropertyBounds] = Set(derivedProperty)
+
+    override def derivesCollaboratively: Set[PropertyBounds] = Set.empty
+    /**
+     * Specifies the kind of the properties that will trigger the analysis to be registered.
+     */
+    override def triggeredBy: PropertyKind = FieldAssignability
+
+    /**
+     * Called when a schedule is executed and when this analysis shall register itself
+     * with the property store using [[org.opalj.fpcf.PropertyStore#registerTriggeredComputation]].
+     * This method is typically called by the [[org.opalj.br.fpcf.FPCFAnalysesManager]].
+     *
+     * @note This analysis must not call `registerLazyPropertyComputation` or a variant of
+     *       `scheduleEagerComputationForEntity`.
+     */
+    override def register(
+        project: SomeProject,
+        ps:      PropertyStore,
+        i:       TriggeredTypeImmutabilityAnalysis.InitializationData
+    ): FPCFAnalysis = {
+        val typeExtensibility = project.get(TypeExtensibilityKey)
+        val analysis = new TypeImmutabilityAnalysis(project)
+        val types = project.allClassFiles.iterator.filter(_.thisType ne ObjectType.Object).map(_.thisType)
+        ps.scheduleEagerComputationsForEntities(types) {
+            analysis.step1(typeExtensibility)
+        }
+        analysis
+    }
+}
+
 object LazyTypeImmutabilityAnalysis extends TypeImmutabilityAnalysisScheduler
     with BasicFPCFLazyAnalysisScheduler {
 
@@ -302,8 +338,9 @@ object LazyTypeImmutabilityAnalysis extends TypeImmutabilityAnalysisScheduler
     override def register(p: SomeProject, ps: PropertyStore, unused: Null): FPCFAnalysis = {
         val typeExtensibility = p.get(TypeExtensibilityKey)
         val analysis = new TypeImmutabilityAnalysis(p)
-        val analysisRunner: ProperPropertyComputation[Entity] =
+        val analysisRunner: ProperPropertyComputation[Entity] = {
             analysis.doDetermineTypeImmutability(typeExtensibility)
+        }
         ps.registerLazyPropertyComputation(TypeImmutability.key, analysisRunner)
         analysis
     }
