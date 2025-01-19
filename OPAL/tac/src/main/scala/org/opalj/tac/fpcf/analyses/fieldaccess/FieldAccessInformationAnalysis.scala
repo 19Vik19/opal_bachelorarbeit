@@ -199,7 +199,8 @@ private[fieldaccess] trait FieldAccessInformationAnalysisScheduler extends FPCFA
         FieldReadAccessInformation,
         FieldWriteAccessInformation,
         MethodFieldReadAccessInformation,
-        MethodFieldWriteAccessInformation
+        MethodFieldWriteAccessInformation,
+        Callers
     )
 
     protected def derivedProperties: Set[PropertyBounds] = PropertyBounds.ubs(
