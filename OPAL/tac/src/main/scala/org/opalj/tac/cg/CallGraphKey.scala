@@ -6,7 +6,7 @@ package cg
 import scala.reflect.runtime.universe.runtimeMirror
 
 import scala.collection.mutable.ArrayBuffer
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import org.opalj.ai.domain.RecordCFG
 import org.opalj.ai.domain.RecordDefUse
@@ -27,7 +27,7 @@ import org.opalj.fpcf.PropertyStore
 import org.opalj.log.LogContext
 import org.opalj.log.OPALLogger
 import org.opalj.log.OPALLogger.error
-import org.opalj.tac.fpcf.analyses.LazyTACAIProvider
+import org.opalj.tac.fpcf.analyses.EagerTACAIProvider
 import org.opalj.tac.fpcf.analyses.cg.CallGraphAnalysisScheduler
 import org.opalj.tac.fpcf.analyses.cg.TypeIterator
 import org.opalj.tac.fpcf.analyses.cg.reflection.ReflectionRelatedCallsAnalysisScheduler
@@ -111,7 +111,7 @@ trait CallGraphKey extends ProjectInformationKey[CallGraph, Nothing] {
         // TODO make TACAI analysis configurable
         val analyses: ArrayBuffer[FPCFAnalysisScheduler] =
             ArrayBuffer(
-                LazyTACAIProvider
+                EagerTACAIProvider
             )
 
         analyses += CallGraphAnalysisScheduler

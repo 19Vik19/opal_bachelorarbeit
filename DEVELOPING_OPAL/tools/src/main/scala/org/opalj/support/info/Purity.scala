@@ -16,7 +16,6 @@ import org.opalj.ai.Domain
 import org.opalj.ai.domain
 import org.opalj.ai.domain.RecordDefUse
 import org.opalj.ai.fpcf.properties.AIDomainFactoryKey
-import org.opalj.br.DeclaredMethod
 import org.opalj.br.DefinedMethod
 import org.opalj.br.analyses.DeclaredMethodsKey
 import org.opalj.br.analyses.Project
@@ -46,8 +45,6 @@ import org.opalj.br.fpcf.properties.ImpureByAnalysis
 import org.opalj.br.fpcf.properties.ImpureByLackOfInformation
 import org.opalj.br.fpcf.properties.Pure
 import org.opalj.br.fpcf.properties.SideEffectFree
-import org.opalj.br.fpcf.properties.cg.Callers
-import org.opalj.br.fpcf.properties.cg.NoCallers
 import org.opalj.bytecode.JRELibraryFolder
 import org.opalj.collection.immutable.IntTrieSet
 import org.opalj.fpcf.ComputationSpecification
@@ -255,12 +252,12 @@ object Purity {
             project.get(callGraphKey)
         } { t => callGraphTime = t.toSeconds }
 
-        val reachableMethods =
-            ps.entities(Callers.key).collect {
-                case FinalEP(m: DeclaredMethod, c: Callers) if c ne NoCallers => m
-            }.toSet
-
+        val reachableMethods = declaredMethods.declaredMethods.toSet
         val contextProvider = project.get(ContextProviderKey)
+        project.updateProjectInformationKeyInitializationData(ContextProviderKey)(_ =>
+            callGraphKey.getTypeIterator(project)
+        )
+
         val analyzedContexts = projMethods.filter(reachableMethods.contains).map(contextProvider.newContext(_))
 
         time {

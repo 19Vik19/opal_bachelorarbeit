@@ -29,8 +29,8 @@ import org.opalj.br.fpcf.FPCFAnalysesManagerKey
 import org.opalj.br.fpcf.FPCFAnalysis
 import org.opalj.br.fpcf.FPCFAnalysisScheduler
 import org.opalj.br.fpcf.PropertyStoreKey
+import org.opalj.br.fpcf.analyses.EagerStaticDataUsageAnalysis
 import org.opalj.br.fpcf.analyses.LazyL0CompileTimeConstancyAnalysis
-import org.opalj.br.fpcf.analyses.LazyStaticDataUsageAnalysis
 import org.opalj.br.fpcf.analyses.immutability.LazyClassImmutabilityAnalysis
 import org.opalj.br.fpcf.analyses.immutability.LazyTypeImmutabilityAnalysis
 import org.opalj.br.fpcf.properties.immutability.Assignable
@@ -56,16 +56,18 @@ import org.opalj.br.fpcf.properties.immutability.TypeImmutability
 import org.opalj.br.fpcf.properties.immutability.UnsafelyLazilyInitialized
 import org.opalj.bytecode.JRELibraryFolder
 import org.opalj.fpcf.ComputationSpecification
-import org.opalj.fpcf.Entity
 import org.opalj.fpcf.EPS
+import org.opalj.fpcf.Entity
 import org.opalj.fpcf.OrderedProperty
 import org.opalj.fpcf.PropertyStoreContext
 import org.opalj.log.LogContext
 import org.opalj.tac.cg.CallGraphKey
 import org.opalj.tac.cg.XTACallGraphKey
+import org.opalj.tac.fpcf.analyses.EagerFieldImmutabilityAnalysis
 import org.opalj.tac.fpcf.analyses.LazyFieldImmutabilityAnalysis
-import org.opalj.tac.fpcf.analyses.escape.LazySimpleEscapeAnalysis
+import org.opalj.tac.fpcf.analyses.escape.EagerInterProceduralEscapeAnalysis
 import org.opalj.tac.fpcf.analyses.fieldaccess.EagerFieldAccessInformationAnalysis
+import org.opalj.tac.fpcf.analyses.fieldassignability.LazyL0FieldAssignabilityAnalysis
 import org.opalj.tac.fpcf.analyses.fieldassignability.LazyL2FieldAssignabilityAnalysis
 import org.opalj.util.PerformanceEvaluation.time
 import org.opalj.util.Seconds
@@ -146,13 +148,13 @@ object Immutability {
         val dependencies: List[FPCFAnalysisScheduler] =
             List(
                 EagerFieldAccessInformationAnalysis,
-                LazyL2FieldAssignabilityAnalysis,
-                LazyFieldImmutabilityAnalysis,
+                LazyL0FieldAssignabilityAnalysis,
+                EagerFieldImmutabilityAnalysis,
                 LazyClassImmutabilityAnalysis,
                 LazyTypeImmutabilityAnalysis,
-                LazyStaticDataUsageAnalysis,
+                EagerStaticDataUsageAnalysis,
                 LazyL0CompileTimeConstancyAnalysis,
-                LazySimpleEscapeAnalysis
+                EagerInterProceduralEscapeAnalysis
             )
 
         project.updateProjectInformationKeyInitializationData(AIDomainFactoryKey) { _ =>
