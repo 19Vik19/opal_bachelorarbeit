@@ -196,7 +196,7 @@ object ImmutabilityRunner {
 
         val allDependencies = callgraphKey.allCallGraphAnalyses(project) ++ dependencies
 
-        ScheduleConfig.getConfig.setStrategy(ScheduleStrategy.MPS)
+        ScheduleConfig.getConfig.setStrategy(ScheduleStrategy.SPS)
         ScheduleConfig.getConfig.setLazyTransformerInMultipleBatches(true)
 
         time {

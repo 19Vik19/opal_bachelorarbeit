@@ -58,8 +58,8 @@ import org.opalj.fpcf.ScheduleStrategy
 import org.opalj.fpcf.seq.PKESequentialPropertyStore
 import org.opalj.log.LogContext
 import org.opalj.tac.cg.AllocationSiteBasedPointsToCallGraphKey
-import org.opalj.tac.cg.CHACallGraphKey
 import org.opalj.tac.cg.CallGraphKey
+import org.opalj.tac.cg.CHACallGraphKey
 import org.opalj.tac.cg.RTACallGraphKey
 import org.opalj.tac.fpcf.analyses.LazyFieldImmutabilityAnalysis
 import org.opalj.tac.fpcf.analyses.LazyFieldLocalityAnalysis
@@ -81,6 +81,13 @@ import org.opalj.tac.fpcf.analyses.purity.LazyL2PurityAnalysis
 import org.opalj.tac.fpcf.analyses.purity.SystemOutLoggingAllExceptionRater
 import org.opalj.util.PerformanceEvaluation.time
 import org.opalj.util.Seconds
+/**
+ * This PurityRunner has been adapted for the scheduling strategies. This means that all analyses are transferred to one scheduler,
+ * whereby the call graph is transferred to the scheduler with the other analyses in “dependencies”.
+ * The original purity analysis is the "Purity.scala".
+ *
+ * @author Viktor Wysluch
+ */
 
 /**
  * Executes a purity analysis (L2 by default) along with necessary supporting analysis.
@@ -265,7 +272,7 @@ object PurityRunner {
         val analyzedContexts = projMethods.filter(reachableMethods.contains).map(contextProvider.newContext(_))
 
         ScheduleConfig.getConfig.setStrategy(ScheduleStrategy.MPS)
-        ScheduleConfig.getConfig.setLazyTransformerInMultipleBatches(true)
+        ScheduleConfig.getConfig.setLazyTransformerInMultipleBatches(false)
 
         time {
             manager.runAll(
@@ -456,28 +463,29 @@ object PurityRunner {
             } finally {
                 if (resultsWriter != null) resultsWriter.close()
             }
-        } else {
-            val result =
-                ps.toString(false) +
-                    "\ncompile-time pure:                     " + compileTimePure.size +
-                    "\nAt least pure:                         " + pure.size +
-                    "\nAt least domain-specficic pure:        " + dPure.size +
-                    "\nAt least side-effect free:             " + sideEffectFree.size +
-                    "\nAt least d-s side effect free:         " + dSideEffectFree.size +
-                    "\nAt least externally pure:              " + externallyPure.size +
-                    "\nAt least d-s externally pure:          " + dExternallyPure.size +
-                    "\nAt least externally side-effect free:  " + externallySideEffectFree.size +
-                    "\nAt least d-s ext. side-effect free:    " + dExternallySideEffectFree.size +
-                    "\nAt least contextually pure:            " + contextuallyPure.size +
-                    "\nAt least d-s contextually pure:        " + dContextuallyPure.size +
-                    "\nAt least contextually side-effect free:" + contextuallySideEffectFree.size +
-                    "\nAt least d-s cont. side-effect free:   " + dContextuallySideEffectFree.size +
-                    "\nImpure:                                " + lbImpure.size +
-                    "\nTotal:                                 " + projectEntitiesWithPurity.size
-            Console.println(result)
-            Console.println(s"Call-graph time: $callGraphTime")
-            Console.println(s"Analysis time: $analysisTime")
         }
+
+        val result =
+            ps.toString(false) +
+                "\ncompile-time pure:                     " + compileTimePure.size +
+                "\nAt least pure:                         " + pure.size +
+                "\nAt least domain-specficic pure:        " + dPure.size +
+                "\nAt least side-effect free:             " + sideEffectFree.size +
+                "\nAt least d-s side effect free:         " + dSideEffectFree.size +
+                "\nAt least externally pure:              " + externallyPure.size +
+                "\nAt least d-s externally pure:          " + dExternallyPure.size +
+                "\nAt least externally side-effect free:  " + externallySideEffectFree.size +
+                "\nAt least d-s ext. side-effect free:    " + dExternallySideEffectFree.size +
+                "\nAt least contextually pure:            " + contextuallyPure.size +
+                "\nAt least d-s contextually pure:        " + dContextuallyPure.size +
+                "\nAt least contextually side-effect free:" + contextuallySideEffectFree.size +
+                "\nAt least d-s cont. side-effect free:   " + dContextuallySideEffectFree.size +
+                "\nImpure:                                " + lbImpure.size +
+                "\nTotal:                                 " + projectEntitiesWithPurity.size
+        Console.println(result)
+        Console.println(s"Call-graph time: $callGraphTime")
+        Console.println(s"Analysis time: $analysisTime")
+
     }
 
     def main(args: Array[String]): Unit = {
