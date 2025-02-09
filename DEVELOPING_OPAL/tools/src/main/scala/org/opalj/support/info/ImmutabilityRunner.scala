@@ -197,8 +197,6 @@ object ImmutabilityRunner {
         val allDependencies = callgraphKey.allCallGraphAnalyses(project) ++ dependencies
 
         ScheduleConfig.getConfig.setStrategy(ScheduleStrategy.SPS)
-        // Kann ausgeklammert sein, muss aber nicht. Tut bei SPS sowieso nichts
-        // ScheduleConfig.getConfig.setLazyTransformerInMultipleBatches(true)
 
         time {
             analysesManager.runAll(

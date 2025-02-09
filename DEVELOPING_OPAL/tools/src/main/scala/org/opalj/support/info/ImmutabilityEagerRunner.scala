@@ -193,8 +193,7 @@ object ImmutabilityEagerRunner {
         val allDependencies =
             callgraphKey.allCallGraphAnalyses(project).toList.diff(List(LazyTACAIProvider)) ++ dependencies
 
-        ScheduleConfig.getConfig.setStrategy(ScheduleStrategy.MPS)
-        ScheduleConfig.getConfig.setLazyTransformerInMultipleBatches(true)
+        ScheduleConfig.getConfig.setStrategy(ScheduleStrategy.SPS)
 
         time {
             analysesManager.runAll(
